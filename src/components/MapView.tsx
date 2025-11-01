@@ -1,7 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import DeckGL from '@deck.gl/react';
 import { GeoJsonLayer } from '@deck.gl/layers';
 import type { MapViewState } from '@deck.gl/core';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 interface MapViewProps {
   layers: {
@@ -32,17 +34,42 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
   const [buildingsData, setBuildingsData] = useState<any>(null);
   const [roadsData, setRoadsData] = useState<any>(null);
   const [trafficData, setTrafficData] = useState<any>(null);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<maplibregl.Map | null>(null);
 
   const mapStyleUrl = useMemo(() => {
     switch (mapStyle) {
       case 'dark':
-        return 'mapbox://styles/mapbox/dark-v11';
+        return 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
       case 'satellite':
-        return 'mapbox://styles/mapbox/satellite-streets-v12';
+        return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
       default:
-        return 'mapbox://styles/mapbox/light-v11';
+        return 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
     }
   }, [mapStyle]);
+
+  useEffect(() => {
+    if (!mapContainer.current || map.current) return;
+
+    map.current = new maplibregl.Map({
+      container: mapContainer.current,
+      style: mapStyleUrl,
+      center: [INITIAL_VIEW_STATE.longitude, INITIAL_VIEW_STATE.latitude],
+      zoom: INITIAL_VIEW_STATE.zoom - 1,
+      pitch: 0,
+      bearing: 0,
+    });
+
+    return () => {
+      map.current?.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (map.current) {
+      map.current.setStyle(mapStyleUrl);
+    }
+  }, [mapStyleUrl]);
 
   useEffect(() => {
     // Load GeoJSON data - placeholder for now
@@ -115,25 +142,27 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
   }, [layers, buildingsData, roadsData, trafficData]);
 
   return (
-    <div className="w-full h-full">
-      <DeckGL
-        initialViewState={INITIAL_VIEW_STATE}
-        controller={true}
-        layers={deckLayers}
-        onViewStateChange={({ viewState }: any) => setViewState(viewState)}
-        style={{ position: 'relative', width: '100%', height: '100%' }}
-      >
-        <div 
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: '#e5e7eb'
+    <div className="w-full h-full relative">
+      <div ref={mapContainer} className="absolute inset-0" />
+      <div className="absolute inset-0 pointer-events-none">
+        <DeckGL
+          initialViewState={INITIAL_VIEW_STATE}
+          controller={true}
+          layers={deckLayers}
+          onViewStateChange={({ viewState }: any) => {
+            setViewState(viewState);
+            if (map.current) {
+              map.current.jumpTo({
+                center: [viewState.longitude, viewState.latitude],
+                zoom: viewState.zoom - 1,
+                bearing: viewState.bearing,
+                pitch: viewState.pitch,
+              });
+            }
           }}
+          style={{ position: 'relative', width: '100%', height: '100%', pointerEvents: 'all' }}
         />
-      </DeckGL>
+      </div>
     </div>
   );
 }
