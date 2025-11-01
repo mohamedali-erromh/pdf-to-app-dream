@@ -8,7 +8,7 @@ export default function Index() {
   const [layers, setLayers] = useState({
     buildings: true,
     roads: true,
-    traffic: false,
+    traffic: true,
     noise: false,
   });
 

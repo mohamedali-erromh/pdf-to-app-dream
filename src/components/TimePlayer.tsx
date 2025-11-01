@@ -50,17 +50,21 @@ export default function TimePlayer({
     if (isPlaying) {
       const interval = setInterval(() => {
         setCurrentValue((prev) => {
-          const next = prev + 1;
+          const next = prev + 0.5;
           if (next > 100) {
             setIsPlaying(false);
             return 100;
           }
+          const newTime = new Date(
+            minTime.getTime() + ((maxTime.getTime() - minTime.getTime()) * next) / 100
+          );
+          onTimeChange(newTime);
           return next;
         });
-      }, 1000);
+      }, 100);
       return () => clearInterval(interval);
     }
-  }, [isPlaying]);
+  }, [isPlaying, minTime, maxTime, onTimeChange]);
 
   if (!isVisible) return null;
 

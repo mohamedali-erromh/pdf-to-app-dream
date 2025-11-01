@@ -72,13 +72,117 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
   }, [mapStyleUrl]);
 
   useEffect(() => {
-    // Load GeoJSON data - placeholder for now
-    // In production, this would load and parse the parquet files
-    const mockBuildings = {
-      type: 'FeatureCollection',
-      features: []
+    // Generate mock traffic data for demonstration
+    const generateMockTrafficData = () => {
+      const features = [];
+      const roadSegments = [
+        { start: [10.395, 43.720], end: [10.402, 43.718] },
+        { start: [10.402, 43.718], end: [10.408, 43.715] },
+        { start: [10.408, 43.715], end: [10.415, 43.713] },
+        { start: [10.398, 43.722], end: [10.405, 43.720] },
+        { start: [10.405, 43.720], end: [10.412, 43.717] },
+        { start: [10.395, 43.715], end: [10.402, 43.713] },
+        { start: [10.402, 43.713], end: [10.409, 43.711] },
+        { start: [10.400, 43.725], end: [10.407, 43.723] },
+      ];
+
+      roadSegments.forEach((segment, idx) => {
+        features.push({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: [segment.start, segment.end]
+          },
+          properties: {
+            id: `road_${idx}`,
+            vehicles: Math.floor(Math.random() * 150) + 10,
+            speed: Math.random() * 60 + 20,
+            speedRelative: Math.random() * 0.8 + 0.2
+          }
+        });
+      });
+
+      return {
+        type: 'FeatureCollection',
+        features
+      };
     };
-    setBuildingsData(mockBuildings);
+
+    // Generate mock buildings
+    const generateMockBuildings = () => {
+      const features = [];
+      const center = [10.4017, 43.7167];
+      
+      for (let i = 0; i < 50; i++) {
+        const offsetLng = (Math.random() - 0.5) * 0.02;
+        const offsetLat = (Math.random() - 0.5) * 0.01;
+        const lng = center[0] + offsetLng;
+        const lat = center[1] + offsetLat;
+        const size = 0.0005;
+        
+        features.push({
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[
+              [lng - size, lat - size],
+              [lng + size, lat - size],
+              [lng + size, lat + size],
+              [lng - size, lat + size],
+              [lng - size, lat - size]
+            ]]
+          },
+          properties: {
+            HEIGHT: Math.floor(Math.random() * 30) + 5,
+            POP: Math.floor(Math.random() * 100) + 10
+          }
+        });
+      }
+
+      return {
+        type: 'FeatureCollection',
+        features
+      };
+    };
+
+    // Generate mock roads
+    const generateMockRoads = () => {
+      const features = [];
+      const roadSegments = [
+        { start: [10.395, 43.720], end: [10.402, 43.718] },
+        { start: [10.402, 43.718], end: [10.408, 43.715] },
+        { start: [10.408, 43.715], end: [10.415, 43.713] },
+        { start: [10.398, 43.722], end: [10.405, 43.720] },
+        { start: [10.405, 43.720], end: [10.412, 43.717] },
+        { start: [10.395, 43.715], end: [10.402, 43.713] },
+        { start: [10.402, 43.713], end: [10.409, 43.711] },
+        { start: [10.400, 43.725], end: [10.407, 43.723] },
+        { start: [10.407, 43.723], end: [10.414, 43.721] },
+        { start: [10.393, 43.718], end: [10.400, 43.716] },
+      ];
+
+      roadSegments.forEach((segment, idx) => {
+        features.push({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: [segment.start, segment.end]
+          },
+          properties: {
+            id: `road_${idx}`
+          }
+        });
+      });
+
+      return {
+        type: 'FeatureCollection',
+        features
+      };
+    };
+
+    setBuildingsData(generateMockBuildings());
+    setRoadsData(generateMockRoads());
+    setTrafficData(generateMockTrafficData());
   }, []);
 
   const deckLayers = useMemo(() => {
@@ -121,19 +225,40 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
           data: trafficData,
           stroked: true,
           filled: false,
-          lineWidthMinPixels: 4,
+          lineWidthMinPixels: 6,
           getLineColor: (f: any) => {
             const intensity = f.properties.vehicles || 0;
-            const normalized = Math.min(intensity / 100, 1);
-            return [
-              74 + normalized * 181,
-              144 - normalized * 69,
-              226 - normalized * 166,
-              255
-            ];
+            const normalized = Math.min(intensity / 150, 1);
+            // Gradient from blue (low traffic) to orange (medium) to red (high traffic)
+            if (normalized < 0.5) {
+              // Blue to orange
+              const t = normalized * 2;
+              return [
+                Math.floor(74 + t * (251 - 74)),
+                Math.floor(144 + t * (146 - 144)),
+                Math.floor(226 + t * (60 - 226)),
+                255
+              ];
+            } else {
+              // Orange to red
+              const t = (normalized - 0.5) * 2;
+              return [
+                Math.floor(251 + t * (239 - 251)),
+                Math.floor(146 - t * (68 - 146)),
+                Math.floor(60 - t * 60),
+                255
+              ];
+            }
           },
-          getLineWidth: 5,
+          getLineWidth: (f: any) => {
+            const intensity = f.properties.vehicles || 0;
+            return 3 + (intensity / 150) * 7;
+          },
           pickable: true,
+          updateTriggers: {
+            getLineColor: [currentTime],
+            getLineWidth: [currentTime]
+          }
         })
       );
     }
