@@ -16,6 +16,14 @@ export default function Index() {
   const [currentTime, setCurrentTime] = useState(new Date('2025-11-21T08:00:00'));
   const [selectedVariable, setSelectedVariable] = useState('vehicles');
 
+  const handleTimeChange = (time: Date) => {
+    setCurrentTime(time);
+  };
+
+  const handleVariableChange = (variable: string) => {
+    setSelectedVariable(variable);
+  };
+
   const minTime = new Date('2025-11-21T08:00:00');
   const maxTime = new Date('2026-02-21T23:45:00');
 
@@ -64,8 +72,8 @@ export default function Index() {
 
       <TimePlayer
         isVisible={showPlayer}
-        onTimeChange={setCurrentTime}
-        onVariableChange={setSelectedVariable}
+        onTimeChange={handleTimeChange}
+        onVariableChange={handleVariableChange}
         minTime={minTime}
         maxTime={maxTime}
       />

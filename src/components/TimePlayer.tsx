@@ -50,7 +50,7 @@ export default function TimePlayer({
     if (isPlaying) {
       const interval = setInterval(() => {
         setCurrentValue((prev) => {
-          const next = prev + 0.5;
+          const next = prev + 0.3;
           if (next > 100) {
             setIsPlaying(false);
             return 100;
@@ -61,10 +61,16 @@ export default function TimePlayer({
           onTimeChange(newTime);
           return next;
         });
-      }, 100);
+      }, 50);
       return () => clearInterval(interval);
     }
   }, [isPlaying, minTime, maxTime, onTimeChange]);
+
+  useEffect(() => {
+    if (selectedVariable) {
+      onVariableChange(selectedVariable);
+    }
+  }, [selectedVariable, onVariableChange]);
 
   if (!isVisible) return null;
 

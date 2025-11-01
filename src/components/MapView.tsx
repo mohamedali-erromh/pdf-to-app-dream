@@ -72,42 +72,6 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
   }, [mapStyleUrl]);
 
   useEffect(() => {
-    // Generate mock traffic data for demonstration
-    const generateMockTrafficData = () => {
-      const features = [];
-      const roadSegments = [
-        { start: [10.395, 43.720], end: [10.402, 43.718] },
-        { start: [10.402, 43.718], end: [10.408, 43.715] },
-        { start: [10.408, 43.715], end: [10.415, 43.713] },
-        { start: [10.398, 43.722], end: [10.405, 43.720] },
-        { start: [10.405, 43.720], end: [10.412, 43.717] },
-        { start: [10.395, 43.715], end: [10.402, 43.713] },
-        { start: [10.402, 43.713], end: [10.409, 43.711] },
-        { start: [10.400, 43.725], end: [10.407, 43.723] },
-      ];
-
-      roadSegments.forEach((segment, idx) => {
-        features.push({
-          type: 'Feature',
-          geometry: {
-            type: 'LineString',
-            coordinates: [segment.start, segment.end]
-          },
-          properties: {
-            id: `road_${idx}`,
-            vehicles: Math.floor(Math.random() * 150) + 10,
-            speed: Math.random() * 60 + 20,
-            speedRelative: Math.random() * 0.8 + 0.2
-          }
-        });
-      });
-
-      return {
-        type: 'FeatureCollection',
-        features
-      };
-    };
-
     // Generate mock buildings
     const generateMockBuildings = () => {
       const features = [];
@@ -182,8 +146,68 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
 
     setBuildingsData(generateMockBuildings());
     setRoadsData(generateMockRoads());
-    setTrafficData(generateMockTrafficData());
   }, []);
+
+  // Generate time-based traffic data that changes with currentTime
+  useEffect(() => {
+    if (!currentTime) return;
+
+    const generateTimeBasedTraffic = () => {
+      const features = [];
+      const roadSegments = [
+        { start: [10.395, 43.720], end: [10.402, 43.718], baseTraffic: 50 },
+        { start: [10.402, 43.718], end: [10.408, 43.715], baseTraffic: 80 },
+        { start: [10.408, 43.715], end: [10.415, 43.713], baseTraffic: 120 },
+        { start: [10.398, 43.722], end: [10.405, 43.720], baseTraffic: 40 },
+        { start: [10.405, 43.720], end: [10.412, 43.717], baseTraffic: 90 },
+        { start: [10.395, 43.715], end: [10.402, 43.713], baseTraffic: 60 },
+        { start: [10.402, 43.713], end: [10.409, 43.711], baseTraffic: 100 },
+        { start: [10.400, 43.725], end: [10.407, 43.723], baseTraffic: 70 },
+        { start: [10.407, 43.723], end: [10.414, 43.721], baseTraffic: 110 },
+        { start: [10.393, 43.718], end: [10.400, 43.716], baseTraffic: 55 },
+      ];
+
+      const hour = currentTime.getHours();
+      const minutes = currentTime.getMinutes();
+      
+      // Simulate traffic patterns: higher during rush hours
+      const rushHourMultiplier = 
+        (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19) 
+          ? 1.8 + Math.sin(minutes / 10) * 0.4
+          : 0.6 + Math.sin(minutes / 10) * 0.3;
+
+      roadSegments.forEach((segment, idx) => {
+        // Add some randomness and time-based variation
+        const timeVariation = Math.sin((hour + minutes / 60) * Math.PI / 12 + idx) * 0.5 + 0.5;
+        const vehicles = Math.floor(segment.baseTraffic * rushHourMultiplier * (0.7 + timeVariation * 0.6));
+        
+        features.push({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: [segment.start, segment.end]
+          },
+          properties: {
+            id: `road_${idx}`,
+            vehicles: vehicles,
+            speed: 80 - (vehicles / 200) * 40,
+            speedRelative: 1 - (vehicles / 300),
+            HW_truck: Math.floor(vehicles * 0.15),
+            LMV_passengers: Math.floor(vehicles * 0.60),
+            MHV_deliver: Math.floor(vehicles * 0.20),
+            PWA_moped: Math.floor(vehicles * 0.05),
+          }
+        });
+      });
+
+      return {
+        type: 'FeatureCollection',
+        features
+      };
+    };
+
+    setTrafficData(generateTimeBasedTraffic());
+  }, [currentTime]);
 
   const deckLayers = useMemo(() => {
     const result = [];
@@ -225,26 +249,38 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
           data: trafficData,
           stroked: true,
           filled: false,
-          lineWidthMinPixels: 6,
+          lineWidthMinPixels: 8,
           getLineColor: (f: any) => {
-            const intensity = f.properties.vehicles || 0;
-            const normalized = Math.min(intensity / 150, 1);
-            // Gradient from blue (low traffic) to orange (medium) to red (high traffic)
-            if (normalized < 0.5) {
-              // Blue to orange
-              const t = normalized * 2;
+            const intensity = f.properties[selectedVariable] || f.properties.vehicles || 0;
+            const maxVal = selectedVariable === 'vehicles' ? 200 : 
+                          selectedVariable === 'speed' ? 100 : 1;
+            const normalized = Math.min(intensity / maxVal, 1);
+            
+            // Gradient: Blue (low) → Green → Orange → Red (high)
+            if (normalized < 0.33) {
+              // Blue to Green
+              const t = normalized * 3;
               return [
-                Math.floor(74 + t * (251 - 74)),
-                Math.floor(144 + t * (146 - 144)),
-                Math.floor(226 + t * (60 - 226)),
+                Math.floor(59 + t * (72 - 59)),
+                Math.floor(130 + t * (187 - 130)),
+                Math.floor(246 - t * (126)),
+                255
+              ];
+            } else if (normalized < 0.66) {
+              // Green to Orange
+              const t = (normalized - 0.33) * 3;
+              return [
+                Math.floor(72 + t * (251 - 72)),
+                Math.floor(187 - t * (41)),
+                Math.floor(120 - t * (60)),
                 255
               ];
             } else {
-              // Orange to red
-              const t = (normalized - 0.5) * 2;
+              // Orange to Red
+              const t = (normalized - 0.66) * 3;
               return [
-                Math.floor(251 + t * (239 - 251)),
-                Math.floor(146 - t * (68 - 146)),
+                Math.floor(251 - t * (12)),
+                Math.floor(146 - t * (78)),
                 Math.floor(60 - t * 60),
                 255
               ];
@@ -252,12 +288,12 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
           },
           getLineWidth: (f: any) => {
             const intensity = f.properties.vehicles || 0;
-            return 3 + (intensity / 150) * 7;
+            return 4 + (intensity / 200) * 8;
           },
           pickable: true,
           updateTriggers: {
-            getLineColor: [currentTime],
-            getLineWidth: [currentTime]
+            getLineColor: [selectedVariable, trafficData],
+            getLineWidth: [trafficData]
           }
         })
       );
