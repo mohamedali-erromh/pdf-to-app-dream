@@ -27,7 +27,7 @@ export interface MapViewRef {
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10.2633,
   latitude: 43.6797,
-  zoom: 14,
+  zoom: 13,
   pitch: 45,
   bearing: 0,
   maxZoom: 20,
