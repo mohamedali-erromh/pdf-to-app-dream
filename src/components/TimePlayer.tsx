@@ -47,7 +47,7 @@ export default function TimePlayer({
   };
 
   useEffect(() => {
-    if (isPlaying) {
+    if (isPlaying && isVisible) {
       const interval = setInterval(() => {
         setCurrentValue((prev) => {
           const next = prev + 0.3;
@@ -64,7 +64,7 @@ export default function TimePlayer({
       }, 50);
       return () => clearInterval(interval);
     }
-  }, [isPlaying, minTime, maxTime, onTimeChange]);
+  }, [isPlaying, isVisible, minTime, maxTime, onTimeChange]);
 
   useEffect(() => {
     if (selectedVariable) {
@@ -133,7 +133,13 @@ export default function TimePlayer({
           </div>
           <Slider
             value={[currentValue]}
-            onValueChange={(value) => setCurrentValue(value[0])}
+            onValueChange={(value) => {
+              setCurrentValue(value[0]);
+              const newTime = new Date(
+                minTime.getTime() + ((maxTime.getTime() - minTime.getTime()) * value[0]) / 100
+              );
+              onTimeChange(newTime);
+            }}
             max={100}
             step={1}
             className="w-full"

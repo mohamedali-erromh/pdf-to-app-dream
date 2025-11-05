@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import MapView from '@/components/MapView';
+import { useState, useRef } from 'react';
+import MapView, { MapViewRef } from '@/components/MapView';
 import LayerControl from '@/components/LayerControl';
 import MapControls from '@/components/MapControls';
 import TimePlayer from '@/components/TimePlayer';
 
 export default function Index() {
+  const mapRef = useRef<MapViewRef>(null);
   const [layers, setLayers] = useState({
     buildings: true,
     roads: true,
@@ -35,18 +36,15 @@ export default function Index() {
   };
 
   const handleZoomIn = () => {
-    // Implement zoom in logic
-    console.log('Zoom in');
+    mapRef.current?.zoomIn();
   };
 
   const handleZoomOut = () => {
-    // Implement zoom out logic
-    console.log('Zoom out');
+    mapRef.current?.zoomOut();
   };
 
   const handleResetView = () => {
-    // Implement reset view logic
-    console.log('Reset view');
+    mapRef.current?.resetView();
   };
 
   const showPlayer = layers.traffic || layers.noise;
@@ -54,6 +52,7 @@ export default function Index() {
   return (
     <div className="relative w-screen h-screen overflow-hidden">
       <MapView
+        ref={mapRef}
         layers={layers}
         mapStyle={mapStyle}
         currentTime={currentTime}

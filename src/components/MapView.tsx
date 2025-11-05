@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import DeckGL from '@deck.gl/react';
 import { GeoJsonLayer } from '@deck.gl/layers';
 import type { MapViewState } from '@deck.gl/core';
@@ -18,6 +18,12 @@ interface MapViewProps {
   selectedVariable?: string;
 }
 
+export interface MapViewRef {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetView: () => void;
+}
+
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10.2633,
   latitude: 43.6797,
@@ -30,13 +36,25 @@ const INITIAL_VIEW_STATE: MapViewState = {
   minPitch: 0
 };
 
-export default function MapView({ layers, mapStyle, currentTime, selectedVariable }: MapViewProps) {
+const MapView = forwardRef<MapViewRef, MapViewProps>(({ layers, mapStyle, currentTime, selectedVariable }, ref) => {
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
   const [buildingsData, setBuildingsData] = useState<any>(null);
   const [roadsData, setRoadsData] = useState<any>(null);
   const [trafficData, setTrafficData] = useState<any>(null);
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    zoomIn: () => {
+      setViewState(prev => ({ ...prev, zoom: Math.min(prev.zoom + 1, 20) }));
+    },
+    zoomOut: () => {
+      setViewState(prev => ({ ...prev, zoom: Math.max(prev.zoom - 1, 0) }));
+    },
+    resetView: () => {
+      setViewState(INITIAL_VIEW_STATE);
+    }
+  }));
 
   const mapStyleUrl = useMemo(() => {
     switch (mapStyle) {
@@ -355,7 +373,7 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
   return (
     <div className="w-full h-full relative">
       <div ref={mapContainer} className="absolute inset-0" />
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0">
         <DeckGL
           viewState={viewState}
           controller={true}
@@ -371,9 +389,13 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
               });
             }
           }}
-          style={{ position: 'relative', width: '100%', height: '100%', pointerEvents: 'all' }}
+          style={{ position: 'absolute', width: '100%', height: '100%' }}
         />
       </div>
     </div>
   );
-}
+});
+
+MapView.displayName = 'MapView';
+
+export default MapView;
