@@ -18,8 +18,8 @@ interface MapViewProps {
 }
 
 const INITIAL_VIEW_STATE: MapViewState = {
-  longitude: 10.4017,
-  latitude: 43.7167,
+  longitude: 10.2633,
+  latitude: 43.6797,
   zoom: 14,
   pitch: 45,
   bearing: 0,
@@ -75,7 +75,7 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
     // Generate mock buildings
     const generateMockBuildings = () => {
       const features = [];
-      const center = [10.4017, 43.7167];
+      const center = [10.2633, 43.6797];
       
       for (let i = 0; i < 50; i++) {
         const offsetLng = (Math.random() - 0.5) * 0.02;
@@ -113,16 +113,16 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
     const generateMockRoads = () => {
       const features = [];
       const roadSegments = [
-        { start: [10.395, 43.720], end: [10.402, 43.718] },
-        { start: [10.402, 43.718], end: [10.408, 43.715] },
-        { start: [10.408, 43.715], end: [10.415, 43.713] },
-        { start: [10.398, 43.722], end: [10.405, 43.720] },
-        { start: [10.405, 43.720], end: [10.412, 43.717] },
-        { start: [10.395, 43.715], end: [10.402, 43.713] },
-        { start: [10.402, 43.713], end: [10.409, 43.711] },
-        { start: [10.400, 43.725], end: [10.407, 43.723] },
-        { start: [10.407, 43.723], end: [10.414, 43.721] },
-        { start: [10.393, 43.718], end: [10.400, 43.716] },
+        { start: [10.257, 43.682], end: [10.264, 43.680] },
+        { start: [10.264, 43.680], end: [10.270, 43.677] },
+        { start: [10.270, 43.677], end: [10.277, 43.675] },
+        { start: [10.260, 43.684], end: [10.267, 43.682] },
+        { start: [10.267, 43.682], end: [10.274, 43.679] },
+        { start: [10.257, 43.677], end: [10.264, 43.675] },
+        { start: [10.264, 43.675], end: [10.271, 43.673] },
+        { start: [10.262, 43.687], end: [10.269, 43.685] },
+        { start: [10.269, 43.685], end: [10.276, 43.683] },
+        { start: [10.255, 43.680], end: [10.262, 43.678] },
       ];
 
       roadSegments.forEach((segment, idx) => {
@@ -155,16 +155,16 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
     const generateTimeBasedTraffic = () => {
       const features = [];
       const roadSegments = [
-        { start: [10.395, 43.720], end: [10.402, 43.718], baseTraffic: 50 },
-        { start: [10.402, 43.718], end: [10.408, 43.715], baseTraffic: 80 },
-        { start: [10.408, 43.715], end: [10.415, 43.713], baseTraffic: 120 },
-        { start: [10.398, 43.722], end: [10.405, 43.720], baseTraffic: 40 },
-        { start: [10.405, 43.720], end: [10.412, 43.717], baseTraffic: 90 },
-        { start: [10.395, 43.715], end: [10.402, 43.713], baseTraffic: 60 },
-        { start: [10.402, 43.713], end: [10.409, 43.711], baseTraffic: 100 },
-        { start: [10.400, 43.725], end: [10.407, 43.723], baseTraffic: 70 },
-        { start: [10.407, 43.723], end: [10.414, 43.721], baseTraffic: 110 },
-        { start: [10.393, 43.718], end: [10.400, 43.716], baseTraffic: 55 },
+        { start: [10.257, 43.682], end: [10.264, 43.680], baseTraffic: 50 },
+        { start: [10.264, 43.680], end: [10.270, 43.677], baseTraffic: 80 },
+        { start: [10.270, 43.677], end: [10.277, 43.675], baseTraffic: 120 },
+        { start: [10.260, 43.684], end: [10.267, 43.682], baseTraffic: 40 },
+        { start: [10.267, 43.682], end: [10.274, 43.679], baseTraffic: 90 },
+        { start: [10.257, 43.677], end: [10.264, 43.675], baseTraffic: 60 },
+        { start: [10.264, 43.675], end: [10.271, 43.673], baseTraffic: 100 },
+        { start: [10.262, 43.687], end: [10.269, 43.685], baseTraffic: 70 },
+        { start: [10.269, 43.685], end: [10.276, 43.683], baseTraffic: 110 },
+        { start: [10.255, 43.680], end: [10.262, 43.678], baseTraffic: 55 },
       ];
 
       const hour = currentTime.getHours();
@@ -300,14 +300,14 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
     }
 
     return result;
-  }, [layers, buildingsData, roadsData, trafficData]);
+  }, [layers, buildingsData, roadsData, trafficData, selectedVariable]);
 
   return (
     <div className="w-full h-full relative">
       <div ref={mapContainer} className="absolute inset-0" />
       <div className="absolute inset-0 pointer-events-none">
         <DeckGL
-          initialViewState={INITIAL_VIEW_STATE}
+          viewState={viewState}
           controller={true}
           layers={deckLayers}
           onViewStateChange={({ viewState }: any) => {
