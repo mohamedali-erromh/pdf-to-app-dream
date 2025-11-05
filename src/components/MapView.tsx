@@ -4,6 +4,7 @@ import { GeoJsonLayer } from '@deck.gl/layers';
 import type { MapViewState } from '@deck.gl/core';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { loadBuildingsData, loadRoadsData, loadTrafficData } from '@/lib/parquetLoader';
 
 interface MapViewProps {
   layers: {
@@ -72,7 +73,31 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
   }, [mapStyleUrl]);
 
   useEffect(() => {
-    // Generate mock buildings
+    // Load real data from Parquet files
+    const loadRealData = async () => {
+      try {
+        console.log('Loading real Parquet data...');
+        
+        const [buildings, roads] = await Promise.all([
+          loadBuildingsData('/data/buildings_real.parquet'),
+          loadRoadsData('/data/roads_real.parquet')
+        ]);
+        
+        console.log('Buildings loaded:', buildings.features.length);
+        console.log('Roads loaded:', roads.features.length);
+        
+        setBuildingsData(buildings);
+        setRoadsData(roads);
+      } catch (error) {
+        console.error('Error loading Parquet data:', error);
+        // Fallback to mock data
+        console.log('Using mock data as fallback');
+        setBuildingsData(generateMockBuildings());
+        setRoadsData(generateMockRoads());
+      }
+    };
+
+    // Mock data generators as fallback
     const generateMockBuildings = () => {
       const features = [];
       const center = [10.2633, 43.6797];
@@ -109,7 +134,6 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
       };
     };
 
-    // Generate mock roads
     const generateMockRoads = () => {
       const features = [];
       const roadSegments = [
@@ -144,13 +168,41 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
       };
     };
 
-    setBuildingsData(generateMockBuildings());
-    setRoadsData(generateMockRoads());
+    loadRealData();
   }, []);
 
-  // Generate time-based traffic data that changes with currentTime
+  // Load time-based traffic data from Parquet
   useEffect(() => {
     if (!currentTime) return;
+
+    const loadRealTrafficData = async () => {
+      try {
+        const allTrafficData = await loadTrafficData('/data/traffic_real.parquet');
+        
+        // Filter traffic data based on current time
+        const currentHour = currentTime.getHours();
+        const currentMinutes = currentTime.getMinutes();
+        const currentTimeInSeconds = currentHour * 3600 + currentMinutes * 60;
+        
+        // Filter features that are active at current time
+        const activeFeatures = allTrafficData.features.filter((feature: any) => {
+          const begin = feature.properties.begin || 0;
+          const end = feature.properties.end || 86400; // 24 hours in seconds
+          return currentTimeInSeconds >= begin && currentTimeInSeconds <= end;
+        });
+        
+        console.log(`Active traffic features at ${currentHour}:${currentMinutes}:`, activeFeatures.length);
+        
+        setTrafficData({
+          type: 'FeatureCollection',
+          features: activeFeatures
+        });
+      } catch (error) {
+        console.error('Error loading traffic data:', error);
+        // Fallback to mock data
+        setTrafficData(generateTimeBasedTraffic());
+      }
+    };
 
     const generateTimeBasedTraffic = () => {
       const features = [];
@@ -170,14 +222,12 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
       const hour = currentTime.getHours();
       const minutes = currentTime.getMinutes();
       
-      // Simulate traffic patterns: higher during rush hours
       const rushHourMultiplier = 
         (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19) 
           ? 1.8 + Math.sin(minutes / 10) * 0.4
           : 0.6 + Math.sin(minutes / 10) * 0.3;
 
       roadSegments.forEach((segment, idx) => {
-        // Add some randomness and time-based variation
         const timeVariation = Math.sin((hour + minutes / 60) * Math.PI / 12 + idx) * 0.5 + 0.5;
         const vehicles = Math.floor(segment.baseTraffic * rushHourMultiplier * (0.7 + timeVariation * 0.6));
         
@@ -206,7 +256,7 @@ export default function MapView({ layers, mapStyle, currentTime, selectedVariabl
       };
     };
 
-    setTrafficData(generateTimeBasedTraffic());
+    loadRealTrafficData();
   }, [currentTime]);
 
   const deckLayers = useMemo(() => {
